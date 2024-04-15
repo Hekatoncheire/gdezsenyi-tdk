@@ -238,4 +238,74 @@ for patient_id in train_test_data.keys():
 
     mard_values_mse = np.mean(np.square(np.array(list(mard_values_normalized.values()))))
 
-    threshold_basic = np.m
+    threshold_basic = np.mean(reconstruction_errors) + 3*np.std(reconstruction_errors)
+
+    anomalies_basic = reconstruction_errors > threshold_basic
+    anomalies_mard = reconstruction_errors > mard_values_mse
+
+    # Eredmények vizualizációja
+    plt.figure(figsize=(14, 6))
+
+    # Teszt adathalmaz átalakítása plottoláshoz
+    X_test_flattened = X_test.flatten()
+
+    # Teszt adathalmaz visszaalakítása eredeti glükózértékekké
+    X_test_flattened = scaler.inverse_transform(X_test_flattened.reshape(-1,1))
+
+    # Indexek generálása
+    indices = np.arange(len(X_test_flattened))
+
+    # Feltételezzük, hogy az anomáliákat tartalmazó tömb logikai értékekből áll
+    # Anomália-flag-ek ismétlése, hogy azonos struktúrát kapjunk a teszt adathalmazunkkal
+    sequence_length = X_test.shape[1]
+    anomalies_repeated = np.repeat(anomalies_basic, sequence_length)
+    anomalies_repeated_mard = np.repeat(anomalies_mard, sequence_length)
+    assert len(anomalies_repeated) == len(X_test_flattened), "Anomalies array length must match the flattened data length."
+    assert len(anomalies_repeated_mard) == len(X_test_flattened), "Anomalies_MARD array length must match the flattened data length."
+
+    # Teszt adathalmaz vizualizálása
+    plt.plot(indices, X_test_flattened, label='Original Data', color='blue', alpha=0.7)
+
+    # Anomáliák ráillesztése
+    plt.scatter(indices[anomalies_repeated], X_test_flattened[anomalies_repeated], color='red', label='Anomaly', alpha=1, edgecolors='black', s=50)
+    plt.scatter(indices[anomalies_repeated_mard], X_test_flattened[anomalies_repeated_mard], color='black', label='Anomaly-MARD', alpha=1, marker='x', s=50)
+    
+    plt.title('Detected Anomalies in Data')
+    plt.xlabel('Data Point Index')
+    plt.ylabel('Glucose Value')
+    plt.legend()
+    plt.show()
+    
+    #TOF/LOF anomáliák
+    tof_lof(X_test_flattened, indices)
+
+    # Rekonstrukciós hiba alakulása
+    reconstruction_errors_repeated = np.repeat(reconstruction_errors, sequence_length)
+    threshold_basic_repeated = np.repeat(threshold_basic, len(reconstruction_errors_repeated))
+    mard_values_repeated = np.repeat(mard_values_mse, len(reconstruction_errors_repeated))
+    assert len(reconstruction_errors_repeated) == len(X_test_flattened), "Reconstruction errors array length must match the flattened data length"
+    assert len(threshold_basic_repeated) == len(X_test_flattened), "Threshold must be repeated for measurement"
+    
+    fig_loss, axs_loss = plt.subplots(2,1, sharex=True)
+    axs_loss[0].plot(indices, X_test_flattened, label= 'CGM data', color= 'blue', alpha=1)
+    axs_loss[0].set_ylabel('Values')
+    
+    axs_loss[1].plot(indices, reconstruction_errors_repeated, label= 'Reconstruction loss', color='red', alpha=1)
+    axs_loss[1].plot(indices, threshold_basic_repeated, label= 'Threshold', color='green', alpha=1)
+    axs_loss[1].set_ylabel('Reconstruction loss value')
+    axs_loss[1].set_xlabel('Data Point Index')
+    plt.title('CGM values and reconstruction loss over time')
+    plt.legend()
+    plt.show()
+    
+    fig_dist, axs_dist = plt.subplots(2,1, sharex=False)
+    axs_dist[0].hist(reconstruction_errors_repeated, label='Distribution of reconstruction errors', bins=100)
+    axs_dist[1].hist(mard_values_normalized.values(), label='Distribution of MARD values', bins=10)
+    plt.title('Distribution of reconstruction losses and MARD values')
+    plt.ylabel('Frequency')
+    plt.xlabel('Bins')
+    plt.show()
+    
+    be.clear_session()
+
+print('Tanítás befejezve!')
