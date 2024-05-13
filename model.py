@@ -124,16 +124,21 @@ for patient_id in df_cgmBgmPatients:
 print('MARD értékek kiszámolva!')
 
 ## Temporal Outlier Factor és Local Outlier Factor
+anomalies_lof_count = 0
+anomalies_tof_count = 0
+
 def tof_lof(dataFrame, indices):
     # TOF
     tof_values= pd.DataFrame(dataFrame)
     results_df = detect_outlier(tof_values, cutoff_n=1, in_percent=True)
+    global anomalies_tof_count
+    anomalies_tof_count = len(results_df.query("TOF==1")[0])
     # LOF
     clf = LocalOutlierFactor(n_neighbors=5)
     predictions = clf.fit_predict(dataFrame)
 
     # TOF plottolása
-    fig_TOF, axs_TOF = plt.subplots(2, 1, sharex=True)
+    """ fig_TOF, axs_TOF = plt.subplots(2, 1, sharex=True)
     fig_TOF.suptitle('TOF anomaly detection')
 
     axs_TOF[0].plot(results_df[0], color='blue', label='CGM data')
@@ -157,17 +162,21 @@ def tof_lof(dataFrame, indices):
 
     fig_TOF.tight_layout(rect=[0, 0, 1, 1], pad=1, h_pad=0, w_pad=0)
     plt.show()
-    
+     """
     # LOF plottolása
     predictions_df = pd.DataFrame(predictions)
     anomalies_lof = predictions_df[0]==-1
+    anomalies_lof = pd.DataFrame(anomalies_lof)
+    print(anomalies_lof.dtypes)
+    global anomalies_lof_count
+    anomalies_lof_count = len(anomalies_lof[anomalies_lof[0]==True])
     
-    plt.plot(tof_values, color='black', label='CGM data')
+    """ plt.plot(tof_values, color='black', label='CGM data')
     plt.scatter(indices[anomalies_lof], tof_values[anomalies_lof], color='orange', label='Anomalies', edgecolors='black')
     plt.xlabel('Data point index')
     plt.ylabel('CGM value')
     plt.legend()
-    plt.show()
+    plt.show() """
 
     
     
@@ -242,7 +251,7 @@ for patient_id in train_test_data.keys():
 
     anomalies_basic = reconstruction_errors > threshold_basic
     anomalies_mard = reconstruction_errors > mard_values_mse
-
+    
     # Eredmények vizualizációja
     plt.figure(figsize=(14, 6))
 
@@ -263,7 +272,7 @@ for patient_id in train_test_data.keys():
     assert len(anomalies_repeated) == len(X_test_flattened), "Anomalies array length must match the flattened data length."
     assert len(anomalies_repeated_mard) == len(X_test_flattened), "Anomalies_MARD array length must match the flattened data length."
 
-    # Teszt adathalmaz vizualizálása
+    """ # Teszt adathalmaz vizualizálása
     plt.plot(indices, X_test_flattened, label='Original Data', color='blue', alpha=0.7)
 
     # Anomáliák ráillesztése
@@ -274,10 +283,14 @@ for patient_id in train_test_data.keys():
     plt.xlabel('Data Point Index')
     plt.ylabel('Glucose Value')
     plt.legend()
-    plt.show()
+    plt.show() """
     
     #TOF/LOF anomáliák
     tof_lof(X_test_flattened, indices)
+    anomalies_repeated = pd.DataFrame(anomalies_repeated)
+    anomalies_repeated_mard = pd.DataFrame(anomalies_repeated_mard)
+    #print(anomalies_mard.head)
+    print(len(anomalies_repeated[anomalies_repeated[0]==True])/len(X_test_flattened), len(anomalies_repeated_mard[anomalies_repeated_mard[0]==True])/len(X_test_flattened), anomalies_lof_count/len(X_test_flattened), anomalies_tof_count/len(X_test_flattened))
 
     # Rekonstrukciós hiba alakulása
     reconstruction_errors_repeated = np.repeat(reconstruction_errors, sequence_length)
@@ -286,7 +299,7 @@ for patient_id in train_test_data.keys():
     assert len(reconstruction_errors_repeated) == len(X_test_flattened), "Reconstruction errors array length must match the flattened data length"
     assert len(threshold_basic_repeated) == len(X_test_flattened), "Threshold must be repeated for measurement"
     
-    fig_loss, axs_loss = plt.subplots(2,1, sharex=True)
+    """ fig_loss, axs_loss = plt.subplots(2,1, sharex=True)
     axs_loss[0].plot(indices, X_test_flattened, label= 'CGM data', color= 'blue', alpha=1)
     axs_loss[0].set_ylabel('Values')
     
@@ -304,7 +317,7 @@ for patient_id in train_test_data.keys():
     plt.title('Distribution of reconstruction losses and MARD values')
     plt.ylabel('Frequency')
     plt.xlabel('Bins')
-    plt.show()
+    plt.show() """
     
     be.clear_session()
 
